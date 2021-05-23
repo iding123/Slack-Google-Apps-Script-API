@@ -1,0 +1,107 @@
+/**
+ * These are a set of Slack API functions that can assist in sending automated messages Slack
+ * using Google Apps Scripts.
+ * 
+ * @author: Ivy Ding
+ */
+
+/**
+ * Unique token ID for your Slack workspace
+ */
+const TOKEN = '<replace with unique token connecting to your Slack App>';
+
+/**
+ * Gets a Slack user's user ID via their email
+ * 
+ * @param {String} email The user's email.
+ * @return {String} the user's Slack ID
+ */
+function getUserId(email) {
+  const URL = 'https://slack.com/api/users.lookupByEmail';
+
+  // HTTP request and payload
+  let options = {
+    'method': 'GET',
+    'payload': {
+      'token': TOKEN,
+      'email': email
+    }
+  }
+
+  // gets user info from Slack
+  let response = UrlFetchApp.fetch(URL, options);
+
+  // gets user ID
+  try {
+    let userInfo = JSON.parse(response.getContentText());
+    var userId = userInfo.user.id;
+    console.log(`Username: ${userInfo.user.real_name} \nUserId: ${userId}`);
+  } catch(e) {
+    console.log(email + " is not registered with Slack");
+    return;
+  }
+  return userId;
+}
+
+/**
+ * Sends a message to the user with the given email.
+ * 
+ * @param {String} email The user's email.
+ * @param {String} message The message to be sent to the user.
+ */
+function sendMessageToUser(email, message) {
+  const URL = "https://slack.com/api/chat.postMessage";
+
+  let id = getUserId(email);
+    
+  // HTTP request and payload
+  let options = {
+    "method": 'POST',
+    "payload": {
+      "token": TOKEN,
+      "channel": id,
+      "text": message,
+    }
+  }
+  UrlFetchApp.fetch(URL, options); 
+}
+
+/**
+ * Gets JSON of all users' profile info in the Slack workspace
+ * 
+ * @return {JSON} Every user's profile info on Slack 
+ */
+function getAllUsers() { 
+  const URL = 'https://slack.com/api/users.list';
+  
+  // Make a HTTP Get request with a JSON payload.
+  let options = {
+    'method': 'GET',
+    'payload': {
+      'token': TOKEN
+    }
+  };
+  
+  var checkStatus = function(res) {
+    if (!res.ok) {
+      throw Error("Error in request!");
+    } else {
+      return res;
+    }
+  }
+
+  // Gets all the users' info from Slack
+  let response = UrlFetchApp.fetch(URL, options);
+
+  try {
+    let result = JSON.parse(response.getContentText());
+    result = checkStatus(result);
+    let pid = result.members;
+    Logger.log(result);
+    return pid;
+  } catch(e) {
+    Logger.log(e);
+    Logger.log("Something's wrong with the Slack server, please try again later");
+    return;
+  }
+}
